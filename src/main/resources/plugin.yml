@@ -1,0 +1,6 @@
+name: Zedge
+main: com.github.neapovil.zedge.Zedge
+version: 1.0.0
+api-version: 1.13
+author: Neapovil
+website: https://github.com/neapovil/zedge
