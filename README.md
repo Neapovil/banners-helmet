@@ -1,3 +1,4 @@
 # Zedge
 
-`have them make a plugin that lets you merge helmets with banners, or give horse armor regular armor enchants`
+- [ ] plugin that lets you merge helmets with banners; or
+- [ ] plugin that lets you give horse armor 'regular' armor enchants
