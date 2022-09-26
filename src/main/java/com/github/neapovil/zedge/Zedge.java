@@ -7,8 +7,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.banner.Pattern;
+import org.bukkit.block.banner.PatternType;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -33,6 +36,7 @@ public final class Zedge extends JavaPlugin implements Listener
             .toList();
     private final NamespacedKey bannerKey = new NamespacedKey(this, "hasBanner");
     private final NamespacedKey bannerType = new NamespacedKey(this, "bannerType");
+    private final NamespacedKey patternsCount = new NamespacedKey(this, "patternsCount");
     private final Map<UUID, ArmorStand> entities = new HashMap<>();
 
     @Override
@@ -83,16 +87,24 @@ public final class Zedge extends JavaPlugin implements Listener
 
         event.setCancelled(true);
 
-        event.getCurrentItem().editMeta((i) -> {
-            i.getPersistentDataContainer().set(this.bannerKey, PersistentDataType.INTEGER, 1);
-            i.getPersistentDataContainer().set(this.bannerType, PersistentDataType.STRING, event.getCursor().getType().toString());
+        event.getCurrentItem().editMeta(meta -> {
+            meta.getPersistentDataContainer().set(this.bannerKey, PersistentDataType.INTEGER, 1);
+            meta.getPersistentDataContainer().set(this.bannerType, PersistentDataType.STRING, event.getCursor().getType().toString());
 
-            final BannerMeta b = (BannerMeta) event.getCursor().getItemMeta();
+            final BannerMeta bannermeta = (BannerMeta) event.getCursor().getItemMeta();
 
-            if (!b.getPatterns().isEmpty())
+            if (!bannermeta.getPatterns().isEmpty())
             {
-                for (int n = 0; n < b.numberOfPatterns(); n++)
+                meta.getPersistentDataContainer().set(this.patternsCount, PersistentDataType.INTEGER, bannermeta.numberOfPatterns());
+
+                for (int i = 0; i < bannermeta.numberOfPatterns(); i++)
                 {
+                    final Pattern pattern = bannermeta.getPattern(i);
+
+                    meta.getPersistentDataContainer().set(new NamespacedKey(this, "pattern-" + i + "-type"), PersistentDataType.STRING,
+                            pattern.getPattern().getIdentifier());
+                    meta.getPersistentDataContainer().set(new NamespacedKey(this, "pattern-" + i + "-color"), PersistentDataType.STRING,
+                            pattern.getColor().toString());
                 }
             }
         });
@@ -214,10 +226,34 @@ public final class Zedge extends JavaPlugin implements Listener
         }
 
         final String bannertype = helmet.getItemMeta().getPersistentDataContainer().get(this.bannerType, PersistentDataType.STRING);
+        final ItemStack itemstack = new ItemStack(Material.getMaterial(bannertype), 1);
+
+        if (helmet.getItemMeta().getPersistentDataContainer().has(this.patternsCount))
+        {
+            final int patternscount = helmet.getItemMeta().getPersistentDataContainer().get(this.patternsCount, PersistentDataType.INTEGER);
+
+            for (int i = 0; i < patternscount; i++)
+            {
+                final int inneri = i;
+
+                itemstack.editMeta(BannerMeta.class, bannermeta -> {
+                    final String patternidentifier = helmet.getItemMeta().getPersistentDataContainer().get(
+                            new NamespacedKey(this, "pattern-" + inneri + "-type"),
+                            PersistentDataType.STRING);
+                    final String color = helmet.getItemMeta().getPersistentDataContainer().get(new NamespacedKey(this, "pattern-" + inneri + "-color"),
+                            PersistentDataType.STRING);
+
+                    final PatternType patterntype = PatternType.getByIdentifier(patternidentifier);
+                    final DyeColor dyecolor = DyeColor.valueOf(color);
+
+                    bannermeta.addPattern(new Pattern(dyecolor, patterntype));
+                });
+            }
+        }
 
         final ArmorStand entity = (ArmorStand) player.getWorld().spawnEntity(player.getLocation(), EntityType.ARMOR_STAND);
 
-        entity.getEquipment().setHelmet(new ItemStack(Material.getMaterial(bannertype), 1), true);
+        entity.getEquipment().setHelmet(itemstack, true);
         entity.setInvisible(true);
         entity.setMarker(true);
 
