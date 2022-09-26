@@ -18,6 +18,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -204,6 +205,17 @@ public final class Zedge extends JavaPlugin implements Listener
     private void playerJoin(PlayerJoinEvent event)
     {
         this.spawnBanner(event.getPlayer());
+    }
+
+    @EventHandler
+    private void playerInteract(PlayerInteractEvent event)
+    {
+        if (!event.getMaterial().toString().toLowerCase().endsWith("_helmet"))
+        {
+            return;
+        }
+
+        this.getServer().getScheduler().runTaskLater(this, () -> this.spawnBanner(event.getPlayer()), 1);
     }
 
     private void spawnBanner(Player player)
