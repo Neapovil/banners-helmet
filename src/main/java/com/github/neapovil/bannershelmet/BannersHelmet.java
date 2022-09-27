@@ -1,4 +1,4 @@
-package com.github.neapovil.zedge;
+package com.github.neapovil.bannershelmet;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,9 +27,9 @@ import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class Zedge extends JavaPlugin implements Listener
+public final class BannersHelmet extends JavaPlugin implements Listener
 {
-    private static Zedge instance;
+    private static BannersHelmet instance;
     private final List<Material> materials = Arrays.asList(Material.values())
             .stream()
             .filter(i -> i.toString().toLowerCase().endsWith("banner"))
@@ -53,7 +53,7 @@ public final class Zedge extends JavaPlugin implements Listener
     {
     }
 
-    public static Zedge getInstance()
+    public static BannersHelmet getInstance()
     {
         return instance;
     }

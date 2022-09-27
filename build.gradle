@@ -3,7 +3,7 @@ plugins {
 }
 
 version = '1.18.2'
-group = 'com.github.neapovil.zedge'
+group = 'com.github.neapovil.bannershelmet'
 compileJava.options.encoding = 'UTF-8'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
