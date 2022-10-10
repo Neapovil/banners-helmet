@@ -1,11 +1,14 @@
 package com.github.neapovil.bannershelmet.listener;
 
+import java.util.UUID;
+
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,6 +27,7 @@ import com.github.neapovil.bannershelmet.BannersHelmet;
 public class BannerEntityListener implements Listener
 {
     private final BannersHelmet plugin = BannersHelmet.getInstance();
+    private final NamespacedKey entityKey = new NamespacedKey(plugin, "entity");
 
     @EventHandler
     private void despawnBanner(InventoryClickEvent event)
@@ -33,12 +37,16 @@ public class BannerEntityListener implements Listener
             return;
         }
 
-        final ArmorStand entity = plugin.getEntities().remove(event.getWhoClicked().getUniqueId());
+        final Entity entity = this.getEntity(event.getWhoClicked());
 
-        if (entity != null)
+        if (entity == null)
         {
-            entity.remove();
+            return;
         }
+
+        entity.remove();
+
+        event.getWhoClicked().getPersistentDataContainer().remove(this.entityKey);
     }
 
     @EventHandler
@@ -50,7 +58,7 @@ public class BannerEntityListener implements Listener
     @EventHandler
     private void moveBanner(PlayerMoveEvent event)
     {
-        final ArmorStand entity = plugin.getEntities().get(event.getPlayer().getUniqueId());
+        final Entity entity = this.getEntity(event.getPlayer());
 
         if (entity == null)
         {
@@ -63,12 +71,14 @@ public class BannerEntityListener implements Listener
     @EventHandler
     private void despawnBanner(PlayerQuitEvent event)
     {
-        final ArmorStand entity = plugin.getEntities().remove(event.getPlayer().getUniqueId());
+        final Entity entity = this.getEntity(event.getPlayer());
 
-        if (entity != null)
+        if (entity == null)
         {
-            entity.remove();
+            return;
         }
+
+        entity.remove();
     }
 
     @EventHandler
@@ -107,6 +117,11 @@ public class BannerEntityListener implements Listener
             return;
         }
 
+        if (this.getEntity(player) != null)
+        {
+            return;
+        }
+
         final String bannertype = helmet.getItemMeta().getPersistentDataContainer().get(plugin.getBannerTypeKey(), PersistentDataType.STRING);
         final ItemStack itemstack = new ItemStack(Material.getMaterial(bannertype), 1);
 
@@ -139,6 +154,19 @@ public class BannerEntityListener implements Listener
         entity.setInvisible(true);
         entity.setMarker(true);
 
-        plugin.getEntities().put(player.getUniqueId(), entity);
+        player.getPersistentDataContainer().set(this.entityKey, PersistentDataType.STRING, entity.getUniqueId().toString());
+    }
+
+    private Entity getEntity(Entity player)
+    {
+        if (!player.getPersistentDataContainer().has(this.entityKey))
+        {
+            return null;
+        }
+
+        final String uuidstring = player.getPersistentDataContainer().get(this.entityKey, PersistentDataType.STRING);
+        final UUID entityid = UUID.fromString(uuidstring);
+
+        return plugin.getServer().getEntity(entityid);
     }
 }

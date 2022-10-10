@@ -1,14 +1,10 @@
 package com.github.neapovil.bannershelmet;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -29,7 +25,6 @@ public final class BannersHelmet extends JavaPlugin implements Listener
     private final NamespacedKey patternsCountKey = new NamespacedKey(this, "patternsCount");
     private final NamespacedKey clearEnchantsKey = new NamespacedKey(this, "clearEnchants");
     private final NamespacedKey removalKey = new NamespacedKey(this, "removal");
-    private final Map<UUID, ArmorStand> entities = new HashMap<>();
 
     @Override
     public void onEnable()
@@ -79,10 +74,5 @@ public final class BannersHelmet extends JavaPlugin implements Listener
     public NamespacedKey getRemovalKey()
     {
         return this.removalKey;
-    }
-
-    public Map<UUID, ArmorStand> getEntities()
-    {
-        return this.entities;
     }
 }
