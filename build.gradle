@@ -1,5 +1,6 @@
 plugins {
   id 'java-library'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 version = '1.18.2'
@@ -15,4 +16,13 @@ repositories {
 
 dependencies {
   compileOnly group: 'io.papermc.paper', name: 'paper-api', version: '1.18.2-R0.1-SNAPSHOT'
+  
+  implementation group: 'com.github.stefvanschie.inventoryframework', name: 'IF', version: '0.10.7'
 }
+
+shadowJar {
+  classifier ''
+  relocate 'com.github.stefvanschie.inventoryframework', 'com.github.neapovil.bannershelmet.inventoryframework'
+}
+
+build.dependsOn shadowJar
