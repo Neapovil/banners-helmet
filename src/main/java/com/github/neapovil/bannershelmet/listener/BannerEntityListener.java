@@ -52,7 +52,7 @@ public class BannerEntityListener implements Listener
     @EventHandler
     private void spawnBanner(InventoryClickEvent event)
     {
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> this.spawnBanner((Player) event.getWhoClicked()), 1);
+        plugin.getServer().getScheduler().runTask(plugin, () -> this.spawnBanner((Player) event.getWhoClicked()));
     }
 
     @EventHandler
@@ -95,7 +95,7 @@ public class BannerEntityListener implements Listener
             return;
         }
 
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> this.spawnBanner(event.getPlayer()), 1);
+        plugin.getServer().getScheduler().runTask(plugin, () -> this.spawnBanner(event.getPlayer()));
     }
 
     private void spawnBanner(Player player)

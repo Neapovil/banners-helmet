@@ -26,7 +26,7 @@ public class MergeListener implements Listener
     private final BannersHelmet plugin = BannersHelmet.getInstance();
 
     @EventHandler
-    private void inventoryClickBottom(InventoryClickEvent event)
+    private void inventoryClick(InventoryClickEvent event)
     {
         if (!this.isCustomInventory(event.getInventory()))
         {
