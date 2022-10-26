@@ -1,16 +1,16 @@
 package com.github.neapovil.bannershelmet.listener;
 
 import java.util.Locale;
+import java.util.Map;
 
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.block.BlockFace;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.GrindstoneInventory;
-import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 
 import com.github.neapovil.bannershelmet.BannersHelmet;
 
@@ -22,26 +22,38 @@ public class UnmergeListener implements Listener
     private final BannersHelmet plugin = BannersHelmet.getInstance();
 
     @EventHandler
-    private void setGrindstoneResult(InventoryClickEvent event)
+    private void invetoryClick(InventoryClickEvent event)
     {
-        if (!(event.getInventory() instanceof GrindstoneInventory))
+        if (!this.isCustomInventory(event.getInventory()))
         {
             return;
         }
 
-        final GrindstoneInventory grindstone = (GrindstoneInventory) event.getInventory();
+        event.setCancelled(true);
 
-        if (event.getRawSlot() <= 2)
+        if (event.getRawSlot() > 2)
         {
-            return;
+            this.handleBottom(event);
         }
+        else
+        {
+            this.handleTop(event);
+        }
+    }
 
+    private void handleBottom(InventoryClickEvent event)
+    {
         if (event.getCurrentItem() == null)
         {
             return;
         }
 
         if (event.getCurrentItem().getType().equals(Material.AIR))
+        {
+            return;
+        }
+
+        if (event.getInventory().getItem(0) != null)
         {
             return;
         }
@@ -51,63 +63,26 @@ public class UnmergeListener implements Listener
             return;
         }
 
-        event.setCancelled(true);
+        final ItemStack itemhelmet = event.getCurrentItem().clone();
 
-        if (grindstone.getUpperItem() != null || grindstone.getLowerItem() != null)
-        {
-            return;
-        }
+        event.getCurrentItem().subtract();
 
-        final ItemStack itemstackinput = event.getCurrentItem().clone();
+        event.getInventory().setItem(0, itemhelmet);
 
-        if (!itemstackinput.getItemMeta().hasEnchants())
-        {
-            itemstackinput.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 1);
-            itemstackinput.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            itemstackinput.editMeta(meta -> {
-                meta.getPersistentDataContainer().set(plugin.getClearEnchantsKey(), PersistentDataType.INTEGER, 1);
-            });
-        }
+        final ItemStack itemresult = itemhelmet.clone();
 
-        grindstone.setUpperItem(itemstackinput);
-
-        event.getCurrentItem().setAmount(0);
-
-        final ItemStack itemstackresult = itemstackinput.clone();
-
-        itemstackresult.editMeta(meta -> {
+        itemresult.editMeta(meta -> {
             meta.getPersistentDataContainer().getKeys()
                     .stream()
                     .filter(i -> i.getNamespace().equals(plugin.getName().toLowerCase(Locale.ROOT)))
-                    .filter(i -> !i.equals(plugin.getClearEnchantsKey()))
                     .forEach(i -> meta.getPersistentDataContainer().remove(i));
-
-            if (meta.getPersistentDataContainer().has(plugin.getClearEnchantsKey()))
-            {
-                meta.getEnchants().keySet().forEach(i -> meta.removeEnchant(i));
-            }
-
-            meta.getPersistentDataContainer().set(plugin.getRemovalKey(), PersistentDataType.INTEGER, 1);
         });
 
-        grindstone.setResult(itemstackresult);
+        event.getInventory().setItem(2, itemresult);
     }
 
-    @EventHandler
-    private void grindstoneInputs(InventoryClickEvent event)
+    private void handleTop(InventoryClickEvent event)
     {
-        if (!(event.getInventory() instanceof GrindstoneInventory))
-        {
-            return;
-        }
-
-        final GrindstoneInventory grindstone = (GrindstoneInventory) event.getInventory();
-
-        if (event.getRawSlot() >= 1)
-        {
-            return;
-        }
-
         if (event.getCurrentItem() == null)
         {
             return;
@@ -118,125 +93,37 @@ public class UnmergeListener implements Listener
             return;
         }
 
-        if (!event.getCurrentItem().getItemMeta().getPersistentDataContainer().has(plugin.getBannerKey()))
+        final ItemStack itemstack = event.getCurrentItem().clone();
+
+        event.getCurrentItem().subtract();
+
+        if (event.getRawSlot() == 2)
         {
-            return;
+            event.getInventory().setItem(0, null);
+
+            final Sound sound = Sound.sound(Key.key("minecraft", "block.grindstone.use"), Sound.Source.BLOCK, 1f, 1f);
+
+            event.getWhoClicked().playSound(sound);
         }
 
-        event.setCancelled(true);
+        final Map<Integer, ItemStack> stacks = event.getWhoClicked().getInventory().addItem(itemstack);
 
-        grindstone.getResult().setAmount(0);
-
-        final ItemStack itemstackclone = event.getCurrentItem().clone();
-
-        if (itemstackclone.getItemMeta().getPersistentDataContainer().has(plugin.getClearEnchantsKey()))
+        if (!stacks.isEmpty())
         {
-            itemstackclone.getEnchantments().keySet().forEach(i -> itemstackclone.removeEnchantment(i));
-            itemstackclone.editMeta(meta -> {
-                meta.getPersistentDataContainer().remove(plugin.getClearEnchantsKey());
-            });
+            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), itemstack);
         }
 
-        itemstackclone.removeItemFlags(ItemFlag.HIDE_ENCHANTS);
-
-        event.getCurrentItem().setAmount(0);
-
-        final int slotindex = event.getWhoClicked().getInventory().firstEmpty();
-
-        if (slotindex == -1)
+        if (event.getInventory().getItem(0) == null)
         {
-            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), itemstackclone);
-        }
-        else
-        {
-            event.getWhoClicked().getInventory().setItem(slotindex, itemstackclone);
+            event.getInventory().setItem(2, null);
         }
     }
 
-    @EventHandler
-    private void getGrindstoneResult(InventoryClickEvent event)
+    private boolean isCustomInventory(Inventory inventory)
     {
-        if (!(event.getInventory() instanceof GrindstoneInventory))
-        {
-            return;
-        }
-
-        final GrindstoneInventory grindstone = (GrindstoneInventory) event.getInventory();
-
-        if (event.getRawSlot() != 2)
-        {
-            return;
-        }
-
-        if (event.getCurrentItem() == null)
-        {
-            return;
-        }
-
-        if (event.getCurrentItem().getType().equals(Material.AIR))
-        {
-            return;
-        }
-
-        if (!event.getCurrentItem().getItemMeta().getPersistentDataContainer().has(plugin.getRemovalKey()))
-        {
-            return;
-        }
-
-        grindstone.getUpperItem().setAmount(0);
-
-        final ItemStack itemstackclone = event.getCurrentItem().clone();
-
-        itemstackclone.editMeta(meta -> {
-            meta.getPersistentDataContainer().getKeys()
-                    .stream()
-                    .filter(i -> i.getNamespace().equals(plugin.getName().toLowerCase(Locale.ROOT)))
-                    .forEach(i -> meta.getPersistentDataContainer().remove(i));
-        });
-
-        itemstackclone.removeItemFlags(ItemFlag.HIDE_ENCHANTS);
-
-        event.getCurrentItem().setAmount(0);
-
-        final int slotindex = event.getWhoClicked().getInventory().firstEmpty();
-
-        if (slotindex == -1)
-        {
-            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), itemstackclone);
-        }
-        else
-        {
-            event.getWhoClicked().getInventory().setItem(slotindex, itemstackclone);
-        }
-
-        event.getWhoClicked().playSound(Sound.sound(Key.key("block.grindstone.use"), Sound.Source.BLOCK, 1f, 1f));
-    }
-
-    @EventHandler
-    private void lockGrindstone(InventoryClickEvent event)
-    {
-        if (!(event.getInventory() instanceof GrindstoneInventory))
-        {
-            return;
-        }
-
-        final GrindstoneInventory grindstone = (GrindstoneInventory) event.getInventory();
-
-        if (grindstone.getResult() == null)
-        {
-            return;
-        }
-
-        if (grindstone.getResult().getType().equals(Material.AIR))
-        {
-            return;
-        }
-
-        if (!grindstone.getResult().getItemMeta().getPersistentDataContainer().has(plugin.getRemovalKey()))
-        {
-            return;
-        }
-
-        event.setCancelled(true);
+        return inventory instanceof GrindstoneInventory &&
+                inventory.getLocation() != null &&
+                plugin.getBanners().stream()
+                        .anyMatch(i -> i.equals(inventory.getLocation().getBlock().getRelative(BlockFace.UP).getType()));
     }
 }

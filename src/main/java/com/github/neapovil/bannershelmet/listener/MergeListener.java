@@ -1,100 +1,67 @@
 package com.github.neapovil.bannershelmet.listener;
 
+import java.util.Map;
+
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.banner.Pattern;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import com.github.neapovil.bannershelmet.BannersHelmet;
-import com.github.stefvanschie.inventoryframework.gui.GuiItem;
-import com.github.stefvanschie.inventoryframework.gui.type.AnvilGui;
-import com.github.stefvanschie.inventoryframework.pane.StaticPane;
+
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 
 public class MergeListener implements Listener
 {
     private final BannersHelmet plugin = BannersHelmet.getInstance();
 
     @EventHandler
-    private void merge(PlayerInteractEvent event)
+    private void inventoryClickBottom(InventoryClickEvent event)
     {
-        if (!event.getAction().isRightClick())
-        {
-            return;
-        }
-
-        if (event.getClickedBlock() == null)
-        {
-            return;
-        }
-
-        if (!event.getClickedBlock().getType().toString().toLowerCase().endsWith("anvil"))
-        {
-            return;
-        }
-
-        if (plugin.getBanners().stream().noneMatch(i -> i.equals(event.getClickedBlock().getRelative(BlockFace.UP).getType())))
+        if (!this.isCustomInventory(event.getInventory()))
         {
             return;
         }
 
         event.setCancelled(true);
 
-        final AnvilGui anvilgui = new AnvilGui("BannersHelmet (Merge)");
+        if (event.getRawSlot() <= 2)
+        {
+            this.handleTopFirstSecondItem(event);
+            this.handleTopResultItem(event);
+        }
+        else
+        {
+            this.handleBottomFirstItem(event);
+            this.handleBottomSecondItem(event);
+        }
 
-        anvilgui.setOnGlobalClick(e -> anvilgui.update());
-
-        anvilgui.setOnBottomClick(e -> {
-            if (e.getCurrentItem() == null)
-            {
-                return;
-            }
-
-            this.handleBottomFirstItem(anvilgui, e);
-            this.handleBottomSecondItem(anvilgui, e);
-            this.handleBottomResultItem(anvilgui, e);
-
-            this.updateResultItem(anvilgui, e);
-        });
-
-        anvilgui.setOnTopClick(e -> {
-            if (e.getCurrentItem() == null)
-            {
-                return;
-            }
-
-            this.handleTopFirstItem(anvilgui, e);
-            this.handleTopSecondItem(anvilgui, e);
-            this.handleTopResultItem(anvilgui, e);
-
-            this.updateResultItem(anvilgui, e);
-        });
-
-        anvilgui.setOnClose(e -> {
-            anvilgui.getResultComponent().getPanes().clear();
-
-            if (anvilgui.getFirstItemComponent().hasItem())
-            {
-                e.getPlayer().getWorld().dropItem(e.getPlayer().getLocation(), anvilgui.getFirstItemComponent().getItem(0, 0));
-            }
-
-            if (anvilgui.getSecondItemComponent().hasItem())
-            {
-                e.getPlayer().getWorld().dropItem(e.getPlayer().getLocation(), anvilgui.getSecondItemComponent().getItem(0, 0));
-            }
-        });
-
-        anvilgui.show(event.getPlayer());
+        this.handleResultItem(event);
     }
 
-    private void handleBottomFirstItem(AnvilGui gui, InventoryClickEvent event)
+    private void handleBottomFirstItem(InventoryClickEvent event)
     {
-        if (gui.getFirstItemComponent().hasItem())
+        if (event.getCurrentItem() == null)
+        {
+            return;
+        }
+
+        if (event.getCurrentItem().getType().equals(Material.AIR))
+        {
+            return;
+        }
+
+        if (event.getInventory().getItem(0) != null)
         {
             return;
         }
@@ -109,22 +76,26 @@ public class MergeListener implements Listener
             return;
         }
 
-        final ItemStack helmetitem = event.getCurrentItem().clone();
+        final ItemStack itemhelmet = event.getCurrentItem().clone();
 
         event.getCurrentItem().setAmount(0);
 
-        final StaticPane staticpane = new StaticPane(0, 0, 1, 1);
-
-        staticpane.addItem(new GuiItem(helmetitem), 0, 0);
-
-        gui.getFirstItemComponent().addPane(staticpane);
-
-        gui.update();
+        event.getInventory().setItem(0, itemhelmet);
     }
 
-    private void handleBottomSecondItem(AnvilGui gui, InventoryClickEvent event)
+    private void handleBottomSecondItem(InventoryClickEvent event)
     {
-        if (gui.getSecondItemComponent().hasItem())
+        if (event.getCurrentItem() == null)
+        {
+            return;
+        }
+
+        if (event.getCurrentItem().getType().equals(Material.AIR))
+        {
+            return;
+        }
+
+        if (event.getInventory().getItem(1) != null)
         {
             return;
         }
@@ -134,176 +105,126 @@ public class MergeListener implements Listener
             return;
         }
 
-        final ItemStack banneritem = event.getCurrentItem().clone();
+        final ItemStack itembanner = event.getCurrentItem().asOne();
+
+        event.getCurrentItem().subtract();
+
+        event.getInventory().setItem(1, itembanner);
+    }
+
+    private void handleResultItem(InventoryClickEvent event)
+    {
+        if (event.getInventory().getItem(0) == null)
+        {
+            return;
+        }
+
+        if (event.getInventory().getItem(1) == null)
+        {
+            return;
+        }
+
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            final ItemStack itembanner = event.getInventory().getItem(1);
+            final ItemStack resultitem = event.getInventory().getItem(0).clone();
+
+            resultitem.editMeta(meta -> {
+                meta.getPersistentDataContainer().set(plugin.getBannerKey(), PersistentDataType.INTEGER, 1);
+                meta.getPersistentDataContainer().set(plugin.getBannerTypeKey(), PersistentDataType.STRING, itembanner.getType().toString());
+
+                final BannerMeta bannermeta = (BannerMeta) itembanner.getItemMeta();
+
+                if (!bannermeta.getPatterns().isEmpty())
+                {
+                    meta.getPersistentDataContainer().set(plugin.getPatternsCountKey(), PersistentDataType.INTEGER, bannermeta.numberOfPatterns());
+
+                    for (int i = 0; i < bannermeta.numberOfPatterns(); i++)
+                    {
+                        final Pattern pattern = bannermeta.getPattern(i);
+
+                        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-type"), PersistentDataType.STRING,
+                                pattern.getPattern().getIdentifier());
+                        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-color"), PersistentDataType.STRING,
+                                pattern.getColor().toString());
+                    }
+                }
+            });
+
+            event.getInventory().setItem(2, resultitem);
+        });
+    }
+
+    private void handleTopFirstSecondItem(InventoryClickEvent event)
+    {
+        if (event.getCurrentItem() == null)
+        {
+            return;
+        }
+
+        if (event.getCurrentItem().getType().equals(Material.AIR))
+        {
+            return;
+        }
+
+        if (event.getRawSlot() > 1)
+        {
+            return;
+        }
+
+        event.getInventory().setItem(2, null);
+
+        final ItemStack itemstack = event.getCurrentItem().clone();
 
         event.getCurrentItem().setAmount(0);
 
-        final StaticPane staticpane = new StaticPane(0, 0, 1, 1);
-
-        staticpane.addItem(new GuiItem(banneritem), 0, 0);
-
-        gui.getSecondItemComponent().addPane(staticpane);
-
-        gui.update();
+        this.addItem((Player) event.getWhoClicked(), itemstack);
     }
 
-    private void handleBottomResultItem(AnvilGui gui, InventoryClickEvent event)
+    private void handleTopResultItem(InventoryClickEvent event)
     {
-        if (!gui.getFirstItemComponent().hasItem())
+        if (event.getCurrentItem() == null)
         {
             return;
         }
 
-        final ItemStack firstitemstack = gui.getFirstItemComponent().getItem(0, 0);
-
-        if (!firstitemstack.getType().toString().toLowerCase().endsWith("_helmet"))
+        if (event.getCurrentItem().getType().equals(Material.AIR))
         {
             return;
         }
 
-        if (!gui.getSecondItemComponent().hasItem())
-        {
-            return;
-        }
-
-        final ItemStack seconditemstack = gui.getSecondItemComponent().getItem(0, 0);
-
-        if (plugin.getBanners().stream().noneMatch(i -> i.equals(seconditemstack.getType())))
-        {
-            return;
-        }
-
-        final ItemStack resultitem = firstitemstack.clone();
-
-        resultitem.editMeta(meta -> {
-            meta.getPersistentDataContainer().set(plugin.getBannerKey(), PersistentDataType.INTEGER, 1);
-            meta.getPersistentDataContainer().set(plugin.getBannerTypeKey(), PersistentDataType.STRING, seconditemstack.getType().toString());
-
-            final BannerMeta bannermeta = (BannerMeta) seconditemstack.getItemMeta();
-
-            if (!bannermeta.getPatterns().isEmpty())
-            {
-                meta.getPersistentDataContainer().set(plugin.getPatternsCountKey(), PersistentDataType.INTEGER, bannermeta.numberOfPatterns());
-
-                for (int i = 0; i < bannermeta.numberOfPatterns(); i++)
-                {
-                    final Pattern pattern = bannermeta.getPattern(i);
-
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-type"), PersistentDataType.STRING,
-                            pattern.getPattern().getIdentifier());
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-color"), PersistentDataType.STRING,
-                            pattern.getColor().toString());
-                }
-            }
-        });
-
-        final StaticPane staticpane = new StaticPane(0, 0, 1, 1);
-
-        staticpane.addItem(new GuiItem(resultitem), 0, 0);
-
-        gui.getResultComponent().addPane(staticpane);
-
-        gui.update();
-    }
-
-    private void handleTopFirstItem(AnvilGui gui, InventoryClickEvent event)
-    {
-        if (event.getRawSlot() != 0)
-        {
-            return;
-        }
-
-        if (!gui.getFirstItemComponent().hasItem())
-        {
-            return;
-        }
-
-        final ItemStack firstitem = gui.getFirstItemComponent().getItem(0, 0).clone();
-
-        gui.getFirstItemComponent().getPanes().clear();
-
-        final int freeslotindex = event.getWhoClicked().getInventory().firstEmpty();
-
-        if (freeslotindex == -1)
-        {
-            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), firstitem);
-        }
-        else
-        {
-            event.getWhoClicked().getInventory().setItem(freeslotindex, firstitem);
-        }
-
-        gui.update();
-    }
-
-    private void handleTopSecondItem(AnvilGui gui, InventoryClickEvent event)
-    {
-        if (event.getRawSlot() != 1)
-        {
-            return;
-        }
-
-        if (!gui.getSecondItemComponent().hasItem())
-        {
-            return;
-        }
-
-        final ItemStack seconditem = gui.getSecondItemComponent().getItem(0, 0).clone();
-
-        gui.getSecondItemComponent().getPanes().clear();
-
-        final int freeslotindex = event.getWhoClicked().getInventory().firstEmpty();
-
-        if (freeslotindex == -1)
-        {
-            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), seconditem);
-        }
-        else
-        {
-            event.getWhoClicked().getInventory().setItem(freeslotindex, seconditem);
-        }
-
-        gui.update();
-    }
-
-    private void handleTopResultItem(AnvilGui gui, InventoryClickEvent event)
-    {
         if (event.getRawSlot() != 2)
         {
             return;
         }
 
-        if (!gui.getResultComponent().hasItem())
-        {
-            return;
-        }
+        final ItemStack resultitem = event.getCurrentItem().clone();
 
-        final ItemStack resultitem = gui.getResultComponent().getItem(0, 0).clone();
+        event.getCurrentItem().setAmount(0);
 
-        gui.getFirstItemComponent().getPanes().clear();
-        gui.getSecondItemComponent().getPanes().clear();
-        gui.getResultComponent().getPanes().clear();
+        event.getInventory().setItem(0, null);
+        event.getInventory().setItem(1, null);
 
-        final int freeslotindex = event.getWhoClicked().getInventory().firstEmpty();
+        this.addItem((Player) event.getWhoClicked(), resultitem);
 
-        if (freeslotindex == -1)
-        {
-            event.getWhoClicked().getWorld().dropItem(event.getWhoClicked().getLocation(), resultitem);
-        }
-        else
-        {
-            event.getWhoClicked().getInventory().setItem(freeslotindex, resultitem);
-        }
+        final Sound sound = Sound.sound(Key.key("minecraft", "block.anvil.use"), Sound.Source.BLOCK, 1f, 1f);
 
-        gui.update();
+        event.getWhoClicked().playSound(sound);
     }
 
-    private void updateResultItem(AnvilGui gui, InventoryClickEvent event)
+    private boolean isCustomInventory(Inventory inventory)
     {
-        if (!gui.getFirstItemComponent().hasItem() || !gui.getSecondItemComponent().hasItem())
+        return inventory instanceof AnvilInventory &&
+                inventory.getLocation() != null &&
+                plugin.getBanners().stream().anyMatch(i -> i.equals(inventory.getLocation().getBlock().getRelative(BlockFace.UP).getType()));
+    }
+
+    private void addItem(Player player, ItemStack... itemStacks)
+    {
+        final Map<Integer, ItemStack> stacks = player.getInventory().addItem(itemStacks);
+
+        for (ItemStack i : stacks.values())
         {
-            gui.getResultComponent().getPanes().clear();
-            gui.update();
+            player.getWorld().dropItem(player.getLocation(), i);
         }
     }
 }
