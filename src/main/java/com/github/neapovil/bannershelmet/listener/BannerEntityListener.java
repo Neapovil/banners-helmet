@@ -153,6 +153,7 @@ public class BannerEntityListener implements Listener
         entity.getEquipment().setHelmet(itemstack, true);
         entity.setInvisible(true);
         entity.setMarker(true);
+        entity.setInvulnerable(true);
 
         player.getPersistentDataContainer().set(this.entityKey, PersistentDataType.STRING, entity.getUniqueId().toString());
     }
