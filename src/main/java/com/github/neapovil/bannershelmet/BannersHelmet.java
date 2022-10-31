@@ -1,7 +1,7 @@
 package com.github.neapovil.bannershelmet;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -15,7 +15,7 @@ import com.github.neapovil.bannershelmet.listener.UnmergeListener;
 public final class BannersHelmet extends JavaPlugin implements Listener
 {
     private static BannersHelmet instance;
-    private final List<Material> materials = Arrays.asList(Material.values())
+    private final Collection<Material> materials = Arrays.asList(Material.values())
             .stream()
             .filter(i -> i.toString().toLowerCase().endsWith("banner"))
             .filter(i -> !i.toString().toLowerCase().contains("wall"))
@@ -46,7 +46,7 @@ public final class BannersHelmet extends JavaPlugin implements Listener
         return instance;
     }
 
-    public List<Material> getBanners()
+    public Collection<Material> getBanners()
     {
         return this.materials;
     }
