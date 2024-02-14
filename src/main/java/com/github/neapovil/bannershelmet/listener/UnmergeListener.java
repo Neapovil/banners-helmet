@@ -2,35 +2,34 @@ package com.github.neapovil.bannershelmet.listener;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
+import org.bukkit.NamespacedKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.GrindstoneInventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.destroystokyo.paper.event.inventory.PrepareResultEvent;
 import com.github.neapovil.bannershelmet.BannersHelmet;
 
-public class UnmergeListener implements Listener
+public final class UnmergeListener implements Listener
 {
-    private final BannersHelmet plugin = BannersHelmet.getInstance();
-
     @EventHandler
     private void prepareResult(PrepareResultEvent event)
     {
-        if (!(event.getInventory() instanceof GrindstoneInventory))
+        if (!(event.getInventory() instanceof GrindstoneInventory grindstone))
         {
             return;
         }
 
-        final GrindstoneInventory grindstone = (GrindstoneInventory) event.getInventory();
+        final NamespacedKey bannerkey = BannersHelmet.BANNER_KEY;
 
         final List<ItemStack> stacks = Arrays.asList(grindstone.getContents())
                 .stream()
                 .filter(i -> i != null)
-                .filter(i -> i.getType().toString().toLowerCase().endsWith("_helmet"))
-                .filter(i -> i.getItemMeta().getPersistentDataContainer().has(plugin.getBannerKey()))
+                .filter(i -> i.getType().getEquipmentSlot().equals(EquipmentSlot.HEAD))
+                .filter(i -> i.getItemMeta().getPersistentDataContainer().has(bannerkey))
                 .toList();
 
         if (stacks.isEmpty())
@@ -41,10 +40,7 @@ public class UnmergeListener implements Listener
         final ItemStack itemhelmet = stacks.get(0).clone();
 
         itemhelmet.editMeta(meta -> {
-            meta.getPersistentDataContainer().getKeys()
-                    .stream()
-                    .filter(i -> i.getNamespace().equals(plugin.getName().toLowerCase(Locale.ROOT)))
-                    .forEach(i -> meta.getPersistentDataContainer().remove(i));
+            meta.getPersistentDataContainer().remove(bannerkey);
         });
 
         event.setResult(itemhelmet);

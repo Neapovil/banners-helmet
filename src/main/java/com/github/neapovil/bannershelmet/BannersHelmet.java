@@ -1,7 +1,7 @@
 package com.github.neapovil.bannershelmet;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.List;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -15,21 +15,21 @@ import com.github.neapovil.bannershelmet.listener.UnmergeListener;
 public final class BannersHelmet extends JavaPlugin implements Listener
 {
     private static BannersHelmet instance;
-    private final Collection<Material> materials = Arrays.asList(Material.values())
+    private final List<Material> materials = Arrays.asList(Material.values())
             .stream()
             .filter(i -> i.toString().toLowerCase().endsWith("banner"))
             .filter(i -> !i.toString().toLowerCase().contains("wall"))
             .toList();
-    private final NamespacedKey bannerKey = new NamespacedKey(this, "hasBanner");
-    private final NamespacedKey bannerTypeKey = new NamespacedKey(this, "bannerType");
-    private final NamespacedKey patternsCountKey = new NamespacedKey(this, "patternsCount");
-    private final NamespacedKey clearEnchantsKey = new NamespacedKey(this, "clearEnchants");
-    private final NamespacedKey removalKey = new NamespacedKey(this, "removal");
+    public static NamespacedKey BANNER_KEY;
+    public static NamespacedKey ENTITY_KEY;
 
     @Override
     public void onEnable()
     {
         instance = this;
+
+        BANNER_KEY = new NamespacedKey(this, "banner");
+        ENTITY_KEY = new NamespacedKey(this, "entity");
 
         this.getServer().getPluginManager().registerEvents(new BannerEntityListener(), this);
         this.getServer().getPluginManager().registerEvents(new MergeListener(), this);
@@ -46,33 +46,8 @@ public final class BannersHelmet extends JavaPlugin implements Listener
         return instance;
     }
 
-    public Collection<Material> getBanners()
+    public List<Material> getBanners()
     {
         return this.materials;
-    }
-
-    public NamespacedKey getBannerKey()
-    {
-        return this.bannerKey;
-    }
-
-    public NamespacedKey getBannerTypeKey()
-    {
-        return this.bannerTypeKey;
-    }
-
-    public NamespacedKey getPatternsCountKey()
-    {
-        return this.patternsCountKey;
-    }
-
-    public NamespacedKey getClearEnchantsKey()
-    {
-        return this.clearEnchantsKey;
-    }
-
-    public NamespacedKey getRemovalKey()
-    {
-        return this.removalKey;
     }
 }

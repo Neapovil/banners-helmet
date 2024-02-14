@@ -3,14 +3,13 @@ package com.github.neapovil.bannershelmet.listener;
 import java.util.Map;
 
 import org.bukkit.NamespacedKey;
-import org.bukkit.block.banner.Pattern;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import com.destroystokyo.paper.event.inventory.PrepareResultEvent;
@@ -19,19 +18,17 @@ import com.github.neapovil.bannershelmet.BannersHelmet;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 
-public class MergeListener implements Listener
+public final class MergeListener implements Listener
 {
     private final BannersHelmet plugin = BannersHelmet.getInstance();
 
     @EventHandler
     private void prepareResult(PrepareResultEvent event)
     {
-        if (!(event.getInventory() instanceof AnvilInventory))
+        if (!(event.getInventory() instanceof AnvilInventory anvil))
         {
             return;
         }
-
-        final AnvilInventory anvil = (AnvilInventory) event.getInventory();
 
         final ItemStack firstitem = anvil.getFirstItem();
         final ItemStack seconditem = anvil.getSecondItem();
@@ -41,12 +38,14 @@ public class MergeListener implements Listener
             return;
         }
 
-        if (!firstitem.getType().toString().toLowerCase().endsWith("_helmet"))
+        if (!firstitem.getType().getEquipmentSlot().equals(EquipmentSlot.HEAD))
         {
             return;
         }
 
-        if (firstitem.getItemMeta().getPersistentDataContainer().has(plugin.getBannerKey()))
+        final NamespacedKey bannerkey = BannersHelmet.BANNER_KEY;
+
+        if (firstitem.getItemMeta().getPersistentDataContainer().has(bannerkey))
         {
             return;
         }
@@ -69,25 +68,7 @@ public class MergeListener implements Listener
         final ItemStack resultitem = firstitem.clone();
 
         resultitem.editMeta(meta -> {
-            meta.getPersistentDataContainer().set(plugin.getBannerKey(), PersistentDataType.INTEGER, 1);
-            meta.getPersistentDataContainer().set(plugin.getBannerTypeKey(), PersistentDataType.STRING, seconditem.getType().toString());
-
-            final BannerMeta bannermeta = (BannerMeta) seconditem.getItemMeta();
-
-            if (!bannermeta.getPatterns().isEmpty())
-            {
-                meta.getPersistentDataContainer().set(plugin.getPatternsCountKey(), PersistentDataType.INTEGER, bannermeta.numberOfPatterns());
-
-                for (int i = 0; i < bannermeta.numberOfPatterns(); i++)
-                {
-                    final Pattern pattern = bannermeta.getPattern(i);
-
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-type"), PersistentDataType.STRING,
-                            pattern.getPattern().getIdentifier());
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pattern-" + i + "-color"), PersistentDataType.STRING,
-                            pattern.getColor().toString());
-                }
-            }
+            meta.getPersistentDataContainer().set(bannerkey, PersistentDataType.BYTE_ARRAY, seconditem.serializeAsBytes());
         });
 
         event.setResult(resultitem);
@@ -98,7 +79,7 @@ public class MergeListener implements Listener
     @EventHandler
     private void inventoryClick(InventoryClickEvent event)
     {
-        if (!(event.getInventory() instanceof AnvilInventory))
+        if (!(event.getInventory() instanceof AnvilInventory anvil))
         {
             return;
         }
@@ -108,21 +89,23 @@ public class MergeListener implements Listener
             return;
         }
 
-        final ItemStack firstitem = event.getInventory().getItem(0);
-        final ItemStack seconditem = event.getInventory().getItem(1);
-        final ItemStack resultitem = event.getInventory().getItem(2);
+        final ItemStack firstitem = anvil.getItem(0);
+        final ItemStack seconditem = anvil.getItem(1);
+        final ItemStack resultitem = anvil.getItem(2);
 
         if (firstitem == null)
         {
             return;
         }
 
-        if (!firstitem.getType().toString().toLowerCase().endsWith("_helmet"))
+        if (!firstitem.getType().getEquipmentSlot().equals(EquipmentSlot.HEAD))
         {
             return;
         }
 
-        if (firstitem.getItemMeta().getPersistentDataContainer().has(plugin.getBannerKey()))
+        final NamespacedKey bannerkey = BannersHelmet.BANNER_KEY;
+
+        if (firstitem.getItemMeta().getPersistentDataContainer().has(bannerkey))
         {
             return;
         }
@@ -147,7 +130,7 @@ public class MergeListener implements Listener
             return;
         }
 
-        if (!resultitem.getItemMeta().getPersistentDataContainer().has(plugin.getBannerKey()))
+        if (!resultitem.getItemMeta().getPersistentDataContainer().has(bannerkey))
         {
             return;
         }
